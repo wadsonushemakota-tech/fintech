@@ -14,24 +14,19 @@ from api.models import CreditProfile, TokenLedgerEntry, Transaction, Transaction
 from api.scoring import compute_credit_score, score_to_json
 from api.tokenomics import tokens_for_transaction
 
-
-router = APIRouter(prefix="/businesses/{business_id}", tags=["transactions"])
-
+router = APIRouter(tags=["transactions"])
 
 class TransactionCreate(TransactionBase):
     ts: datetime = Field(default_factory=datetime.utcnow)
-
 
 class BulkIngestResult(BaseModel):
     created: int
     skipped: int
     errors: List[str]
 
-
 class WalletSummary(BaseModel):
     tokens_balance: int
     earned_total: int
-
 
 class CreditProfileOut(BaseModel):
     business_id: int
@@ -41,13 +36,7 @@ class CreditProfileOut(BaseModel):
     last_computed_at: datetime
     features: Dict[str, Any]
 
-
-def _tokens_balance(session) -> int:
-    rows = session.exec(select(TokenLedgerEntry.tokens_delta))
-    return int(sum(rows))
-
-
-@router.post("/transactions", response_model=Transaction)
+@router.post("/transactions/{business_id}", response_model=Transaction)
 def add_transaction(business_id: int, payload: TransactionCreate) -> Transaction:
     if payload.business_id != business_id:
         raise HTTPException(status_code=400, detail="business_id mismatch")
@@ -71,8 +60,7 @@ def add_transaction(business_id: int, payload: TransactionCreate) -> Transaction
 
         return tx
 
-
-@router.get("/transactions", response_model=List[Transaction])
+@router.get("/transactions/{business_id}", response_model=List[Transaction])
 def list_transactions(
     business_id: int,
     type: Optional[TransactionType] = None,
@@ -91,13 +79,8 @@ def list_transactions(
             stmt = stmt.where(Transaction.type == type)
         return list(session.exec(stmt))
 
-
-@router.post("/transactions/upload_csv", response_model=BulkIngestResult)
+@router.post("/transactions/{business_id}/upload_csv", response_model=BulkIngestResult)
 async def upload_transactions_csv(business_id: int, file: UploadFile = File(...)) -> BulkIngestResult:
-    """
-    CSV columns (header required):
-      ts (ISO8601), type, amount, currency, channel, reference, counterparty
-    """
     raw = await file.read()
     text = raw.decode("utf-8", errors="replace")
     reader = csv.DictReader(io.StringIO(text))
@@ -107,7 +90,7 @@ async def upload_transactions_csv(business_id: int, file: UploadFile = File(...)
     errors: List[str] = []
 
     with get_session() as session:
-        for i, row in enumerate(reader, start=2):  # 1 header
+        for i, row in enumerate(reader, start=2):
             try:
                 ts = datetime.fromisoformat((row.get("ts") or "").replace("Z", "+00:00"))
                 ttype = TransactionType((row.get("type") or "other").strip())
@@ -152,8 +135,7 @@ async def upload_transactions_csv(business_id: int, file: UploadFile = File(...)
 
     return BulkIngestResult(created=created, skipped=skipped, errors=errors)
 
-
-@router.get("/wallet", response_model=WalletSummary)
+@router.get("/transactions/{business_id}/wallet", response_model=WalletSummary)
 def wallet(business_id: int) -> WalletSummary:
     with get_session() as session:
         stmt = select(TokenLedgerEntry).where(TokenLedgerEntry.business_id == business_id)
@@ -161,8 +143,7 @@ def wallet(business_id: int) -> WalletSummary:
         earned_total = sum(e.tokens_delta for e in entries if e.tokens_delta > 0)
         return WalletSummary(tokens_balance=int(sum(e.tokens_delta for e in entries)), earned_total=int(earned_total))
 
-
-@router.post("/credit-profile/compute", response_model=CreditProfileOut)
+@router.post("/transactions/{business_id}/credit-profile/compute", response_model=CreditProfileOut)
 def compute_profile(business_id: int) -> CreditProfileOut:
     with get_session() as session:
         res = compute_credit_score(session=session, business_id=business_id)
@@ -197,8 +178,7 @@ def compute_profile(business_id: int) -> CreditProfileOut:
             features=res.features,
         )
 
-
-@router.get("/credit-profile", response_model=CreditProfileOut)
+@router.get("/transactions/{business_id}/credit-profile", response_model=CreditProfileOut)
 def get_profile(business_id: int) -> CreditProfileOut:
     with get_session() as session:
         p = session.get(CreditProfile, business_id)
@@ -207,8 +187,7 @@ def get_profile(business_id: int) -> CreditProfileOut:
         features = {}
         try:
             import json
-
-            features = json.loads(p.features_json or "{}")
+            features = json.loads(p.features_json or "{}");
         except Exception:
             features = {}
         return CreditProfileOut(
@@ -219,4 +198,3 @@ def get_profile(business_id: int) -> CreditProfileOut:
             last_computed_at=p.last_computed_at,
             features=features,
         )
-
