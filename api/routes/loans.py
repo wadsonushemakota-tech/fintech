@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
@@ -14,7 +13,7 @@ from api.models import CreditProfile, LoanApplication, LoanApplicationBase, Loan
 from api.scoring import compute_credit_score, loan_offer_from_score, score_to_json
 
 
-router = APIRouter(prefix="/businesses/{business_id}", tags=["loans"])
+router = APIRouter(prefix="/loans", tags=["loans"])
 
 
 class LoanOffer(BaseModel):
@@ -35,16 +34,14 @@ class LoanApplicationOut(BaseModel):
     decision_reason: Optional[str]
 
 
-@router.get("/loan-offer", response_model=LoanOffer)
+@router.get("/{business_id}/offer", response_model=LoanOffer)
 def loan_offer(business_id: int) -> LoanOffer:
     with get_session() as session:
-        # tokens
         entries = list(
             session.exec(select(TokenLedgerEntry).where(TokenLedgerEntry.business_id == business_id))
         )
         tokens = int(sum(e.tokens_delta for e in entries))
 
-        # profile (compute if missing)
         profile = session.get(CreditProfile, business_id)
         if not profile:
             res = compute_credit_score(session=session, business_id=business_id)
@@ -71,13 +68,12 @@ def loan_offer(business_id: int) -> LoanOffer:
         )
 
 
-@router.post("/loans", response_model=LoanApplicationOut)
+@router.post("/{business_id}/applications", response_model=LoanApplicationOut)
 def apply_for_loan(business_id: int, payload: LoanApplicationBase) -> LoanApplicationOut:
     if payload.business_id != business_id:
         raise HTTPException(status_code=400, detail="business_id mismatch")
 
     with get_session() as session:
-        # gather eligibility signals
         entries = list(session.exec(select(TokenLedgerEntry).where(TokenLedgerEntry.business_id == business_id)))
         tokens = int(sum(e.tokens_delta for e in entries))
 
@@ -97,7 +93,6 @@ def apply_for_loan(business_id: int, payload: LoanApplicationBase) -> LoanApplic
 
         offer_max, _ = loan_offer_from_score(int(profile.score), tokens=tokens)
 
-        # basic rules for demo (real system: underwriting + fraud + KYC + capital provider constraints)
         if payload.amount <= 0:
             raise HTTPException(status_code=400, detail="Invalid amount")
         if payload.amount > offer_max:
@@ -140,7 +135,7 @@ def apply_for_loan(business_id: int, payload: LoanApplicationBase) -> LoanApplic
         )
 
 
-@router.get("/loans", response_model=List[LoanApplicationOut])
+@router.get("/{business_id}/applications", response_model=List[LoanApplicationOut])
 def list_loans(business_id: int, limit: int = 50, offset: int = 0) -> List[LoanApplicationOut]:
     with get_session() as session:
         apps = list(
@@ -166,4 +161,3 @@ def list_loans(business_id: int, limit: int = 50, offset: int = 0) -> List[LoanA
             )
             for a in apps
         ]
-
