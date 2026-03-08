@@ -5,8 +5,8 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException
 from sqlmodel import col, select
 
-from backend.db import get_session
-from backend.models import Business, BusinessBase
+from api.db import get_session
+from api.models import Business, BusinessBase
 
 
 router = APIRouter(prefix="/businesses", tags=["businesses"])

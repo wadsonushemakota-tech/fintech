@@ -9,9 +9,9 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sqlmodel import col, select
 
-from backend.db import get_session
-from backend.models import CreditProfile, LoanApplication, LoanApplicationBase, LoanStatus, TokenLedgerEntry
-from backend.scoring import compute_credit_score, loan_offer_from_score, score_to_json
+from api.db import get_session
+from api.models import CreditProfile, LoanApplication, LoanApplicationBase, LoanStatus, TokenLedgerEntry
+from api.scoring import compute_credit_score, loan_offer_from_score, score_to_json
 
 
 router = APIRouter(prefix="/businesses/{business_id}", tags=["loans"])

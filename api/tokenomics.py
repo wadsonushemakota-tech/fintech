@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from backend.models import Transaction, TransactionType
+from api.models import Transaction, TransactionType
 
 
 @dataclass(frozen=True)

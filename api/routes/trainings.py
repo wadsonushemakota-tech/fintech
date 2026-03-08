@@ -6,8 +6,8 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from sqlmodel import select
 
-from backend.db import get_session
-from backend.models import Training, TrainingEnrollment
+from api.db import get_session
+from api.models import Training, TrainingEnrollment
 
 
 router = APIRouter(prefix="/trainings", tags=["trainings"])

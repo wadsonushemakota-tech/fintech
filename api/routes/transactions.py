@@ -9,10 +9,10 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlmodel import col, select
 
-from backend.db import get_session
-from backend.models import CreditProfile, TokenLedgerEntry, Transaction, TransactionBase, TransactionType
-from backend.scoring import compute_credit_score, score_to_json
-from backend.tokenomics import tokens_for_transaction
+from api.db import get_session
+from api.models import CreditProfile, TokenLedgerEntry, Transaction, TransactionBase, TransactionType
+from api.scoring import compute_credit_score, score_to_json
+from api.tokenomics import tokens_for_transaction
 
 
 router = APIRouter(prefix="/businesses/{business_id}", tags=["transactions"])

@@ -1,2 +1,2 @@
-"""Project Colossal backend package."""
+"""Project Colossal api package."""
 

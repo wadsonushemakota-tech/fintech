@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Tuple
 
 from sqlmodel import Session, select
 
-from backend.models import Transaction, TransactionType
+from api.models import Transaction, TransactionType
 
 
 @dataclass

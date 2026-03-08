@@ -53,3 +53,4 @@ app.include_router(trainings_router)
 
 # This is the key line for serverless on Vercel
 handler = Mangum(app)
+
